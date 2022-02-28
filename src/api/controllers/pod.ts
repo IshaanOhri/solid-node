@@ -28,6 +28,8 @@ const podLogin = catchAsync(async (req: Request, res: Response, next: NextFuncti
 		next(new HttpResponse(status.unauthorized, null, message.invalidCredentials));
 	}
 
+	await client.logout();
+
 	next(new HttpResponse(status.ok, null));
 });
 
@@ -85,6 +87,8 @@ const writeData = catchAsync(async (req: Request, res: Response, next: NextFunct
 		next(new HttpError(status.serverError, {}, message.serverError));
 	}
 
+	await client.logout();
+
 	next(new HttpResponse(status.created, {}));
 });
 
@@ -116,6 +120,8 @@ const readData = catchAsync(async (req: Request, res: Response, next: NextFuncti
 
 	let readResponse = await client.fetch(`https://${username}.${SOLID_PROVIDER}/pod-health/${filename}`);
 	const podData = JSON.parse(await readResponse.text());
+
+	await client.logout();
 
 	next(new HttpResponse(status.ok, podData));
 });
