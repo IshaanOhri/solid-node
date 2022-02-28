@@ -8,9 +8,11 @@
 
 import { Router } from 'express';
 import { miscRouter } from './misc';
+import { podRouter } from './pod';
 
 const router: Router = Router();
 
 router.use(miscRouter);
+router.use(podRouter);
 
 export { router };

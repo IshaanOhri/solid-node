@@ -21,6 +21,7 @@ const message = {
 	healthRoute: 'Node.js backend running successfully!',
 	notFound: 'The requested route does not exist.',
 	serverError: 'An internal server error occurred. Please try again.',
+	invalidCredentials:'Invalid credentials'
 };
 
 export { status, message };

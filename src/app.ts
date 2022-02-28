@@ -22,9 +22,6 @@ app.use(cors());
 // Body parser
 app.use(express.json());
 
-// Connect to Database
-require('./database/database');
-
 // Import routers
 app.use('/api/v1', router);
 
