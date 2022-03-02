@@ -2,10 +2,20 @@ import { NextFunction, Request, Response } from 'express';
 import { status, message } from '../../config';
 import { HttpError, HttpResponse } from '../../handlers';
 import { catchAsync } from '../../middleware';
+import {
+	getActiveMinutes,
+	getCaloriesExpended,
+	getDistance,
+	getHeartPoints,
+	getHeartRate,
+	getSleepDuration,
+	getSpeed,
+	getStepCount,
+} from './googleapis';
 const SolidClient = require('solid-node-client');
 
 // POD Login route
-const podLogin = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+const solidLogin = catchAsync(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 	const {
 		username,
 		password,
@@ -39,26 +49,16 @@ const writeData = catchAsync(async (req: Request, res: Response, next: NextFunct
 		username,
 		password,
 		filename,
-		steps,
-		distance,
-		activeMinutes,
-		caloriesExpended,
-		heartRate,
-		heartPoints,
-		speed,
-		sleepDuration,
+		accessToken,
+		startTime,
+		endTime,
 	}: {
 		username: string;
 		password: string;
-		filename: string;
-		steps: number;
-		distance: number;
-		activeMinutes: number;
-		caloriesExpended: number;
-		heartRate: number;
-		heartPoints: number;
-		speed: number;
-		sleepDuration: number;
+		filename: [string];
+		accessToken: string;
+		startTime: number;
+		endTime: number;
 	} = req.body;
 
 	const client = new SolidClient.SolidNodeClient();
@@ -75,16 +75,37 @@ const writeData = catchAsync(async (req: Request, res: Response, next: NextFunct
 		next(new HttpError(status.unauthorized, {}, message.invalidCredentials));
 	}
 
-	const podBody = { steps, distance, speed, activeMinutes, caloriesExpended, heartPoints, heartRate, sleepDuration };
+	// Call API
 
-	let writeResponse = await client.fetch(`https://${username}.${SOLID_PROVIDER}/pod-health/${filename}`, {
-		method: 'PUT',
-		body: JSON.stringify(podBody),
-		headers: { 'Content-Type': 'application/json' },
-	});
+	const steps = await getStepCount(accessToken, startTime, endTime, 86400000);
+	const distance = await getDistance(accessToken, startTime, endTime, 86400000);
+	const activeMinutes = await getActiveMinutes(accessToken, startTime, endTime, 86400000);
+	const caloriesExpended = await getCaloriesExpended(accessToken, startTime, endTime, 86400000);
+	const heartPoints = await getHeartPoints(accessToken, startTime, endTime, 86400000);
+	const heartRate = await getHeartRate(accessToken, startTime, endTime, 86400000);
+	const speed = await getSpeed(accessToken, startTime, endTime, 86400000);
+	// const steps = await getSleepDuration(accessToken, startTime, endTime, 86400000);
 
-	if (writeResponse.status != 200 && writeResponse.status != 201) {
-		next(new HttpError(status.serverError, {}, message.serverError));
+	for (var i = 0; i < 7; i++) {
+		const podBody = {
+			steps: steps[i],
+			distance: distance[i],
+			activeMinutes: activeMinutes[i],
+			caloriesExpended: caloriesExpended[i],
+			heartPoints: heartPoints[i],
+			heartRate: heartRate[i],
+			speed: speed[i],
+		};
+
+		let writeResponse = await client.fetch(`https://${username}.${SOLID_PROVIDER}/pod-health/${filename[i]}`, {
+			method: 'PUT',
+			body: JSON.stringify(podBody),
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		if (writeResponse.status != 200 && writeResponse.status != 201) {
+			next(new HttpError(status.serverError, {}, message.serverError));
+		}
 	}
 
 	await client.logout();
@@ -101,7 +122,7 @@ const readData = catchAsync(async (req: Request, res: Response, next: NextFuncti
 	}: {
 		username: string;
 		password: string;
-		filename: string;
+		filename: [string];
 	} = req.body;
 
 	const client = new SolidClient.SolidNodeClient();
@@ -118,12 +139,46 @@ const readData = catchAsync(async (req: Request, res: Response, next: NextFuncti
 		next(new HttpError(status.unauthorized, {}, message.invalidCredentials));
 	}
 
-	let readResponse = await client.fetch(`https://${username}.${SOLID_PROVIDER}/pod-health/${filename}`);
-	const podData = JSON.parse(await readResponse.text());
+	const steps: number[] = [],
+		distance: number[] = [],
+		activeMinutes: number[] = [],
+		caloriesExpended: number[] = [],
+		heartRate: number[] = [],
+		heartPoints: number[] = [],
+		sleepDuration: number[] = [],
+		speed: number[] = [];
+
+	for (var i = 0; i < filename.length; i++) {
+		let readResponse = await client.fetch(`https://${username}.${SOLID_PROVIDER}/pod-health/${filename[i]}`);
+
+		if (readResponse.status != 200 && readResponse.status != 201) {
+			next(new HttpError(status.serverError, {}, message.serverError));
+		}
+
+		const podData = JSON.parse(await readResponse.text());
+
+		steps.push(podData.steps);
+		distance.push(podData.distance);
+		activeMinutes.push(podData.activeMinutes);
+		caloriesExpended.push(podData.caloriesExpended);
+		heartPoints.push(podData.heartPoints);
+		heartRate.push(podData.steps);
+		speed.push(podData.speed);
+	}
+
+	const finalResponse: any = {
+		steps,
+		distance,
+		activeMinutes,
+		caloriesExpended,
+		heartPoints,
+		heartRate,
+		speed,
+	};
 
 	await client.logout();
 
-	next(new HttpResponse(status.ok, podData));
+	next(new HttpResponse(status.ok, finalResponse));
 });
 
-export { podLogin, writeData, readData };
+export { solidLogin, writeData, readData };

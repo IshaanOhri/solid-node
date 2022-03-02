@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { health, writeData, podLogin, readData } from '../controllers';
+import { health, writeData, solidLogin, readData } from '../controllers';
 
 const podRouter: Router = Router();
 
 // @desc	POD Login
-// @route	POST /podLogin
-podRouter.post('/podLogin', podLogin);
+// @route	POST /solidLogin
+podRouter.post('/solidLogin', solidLogin);
 
 // @desc	Write Data to POD
 // @route	POST /writeData
