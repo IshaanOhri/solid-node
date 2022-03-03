@@ -162,7 +162,7 @@ const readData = catchAsync(async (req: Request, res: Response, next: NextFuncti
 		activeMinutes.push(podData.activeMinutes);
 		caloriesExpended.push(podData.caloriesExpended);
 		heartPoints.push(podData.heartPoints);
-		heartRate.push(podData.steps);
+		heartRate.push(podData.heartRate);
 		speed.push(podData.speed);
 	}
 
